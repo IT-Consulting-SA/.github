@@ -142,8 +142,7 @@ async function getRepositories() {
   return repositories.filter(
     (repo) =>
       !repo.archived &&
-      !repo.disabled &&
-      repo.name !== ".github"
+      !repo.disabled
   );
 }
 
