@@ -1,14 +1,17 @@
 <?xml version="1.0" encoding="UTF-8"?>
+
 <svg
   xmlns="http://www.w3.org/2000/svg"
-  xmlns:xlink="http://www.w3.org/1999/xlink"
-  width="692"
-  height="140"
-  viewBox="0 0 692 140"
+  width="812"
+  height="152"
+  viewBox="0 0 812 152"
   role="img"
   aria-label="IT-Consulting contributors"
 >
-  <title>IT-Consulting Contributors</title>
+
+  <title>
+    IT-Consulting Contributors
+  </title>
 
   <rect
     width="100%"
@@ -17,10 +20,19 @@
   />
 
   
+        <defs>
+          <clipPath id="avatar-clip-0">
+            <circle
+              cx="56"
+              cy="56"
+              r="36"
+            />
+          </clipPath>
+        </defs>
+
         <a
           href="https://github.com/Akon2020"
           target="_blank"
-          rel="noopener noreferrer"
         >
           <title>
             Akon2020 — 1 repo(s)
@@ -29,22 +41,25 @@
           <image
             x="20"
             y="20"
-            width="64"
-            height="64"
-            href="https://avatars.githubusercontent.com/u/67508776?v=4"
+            width="72"
+            height="72"
+            href="data:image/jpeg;base64,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"
+            clip-path="url(#avatar-clip-0)"
             preserveAspectRatio="xMidYMid slice"
           />
 
           <text
-            x="52"
-            y="102"
+            x="56"
+            y="114"
             text-anchor="middle"
             font-family="Arial, Helvetica, sans-serif"
             font-size="12"
+            font-weight="600"
             fill="#24292f"
           >
             Akon2020
           </text>
         </a>
       
+
 </svg>
