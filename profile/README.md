@@ -437,6 +437,24 @@ https://github.com/IT-Consulting-SA
 
 ---
 
+## 👥 Contributors
+
+Nous remercions toutes les personnes qui contribuent au développement,
+à l'amélioration et à la maintenance des projets de IT-Consulting.
+
+<div align="center">
+
+<a href="https://github.com/IT-Consulting-SA" title="IT-Consulting contributors">
+  <img
+    src="https://raw.githubusercontent.com/IT-Consulting-SA/.github/main/profile/contributors.svg"
+    alt="IT-Consulting contributors"
+  />
+</a>
+
+</div>
+
+---
+
 <div align="center">
 
 ### 🚀 Construisons des solutions technologiques qui font la différence.
