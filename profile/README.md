@@ -446,6 +446,67 @@ Nous remercions toutes les personnes qui contribuent au développement,
 
 <!-- CONTRIBUTORS:START -->
 
+
+<div align="center">
+
+<table>
+
+<tr>
+
+<td align="center" valign="top" width="12.5%">
+
+<a href="https://github.com/Akon2020" title="Voir le profil GitHub de Akon2020">
+
+<img
+  src="https://avatars.githubusercontent.com/u/67508776?v=4"
+  alt="Akon2020"
+  width="72"
+  height="72"
+/>
+
+<br />
+
+<strong>Akon2020</strong>
+
+</a>
+
+<br />
+
+<sub>1 repo</sub>
+
+</td>
+
+
+<td width="12.5%"></td>
+
+
+<td width="12.5%"></td>
+
+
+<td width="12.5%"></td>
+
+
+<td width="12.5%"></td>
+
+
+<td width="12.5%"></td>
+
+
+<td width="12.5%"></td>
+
+
+<td width="12.5%"></td>
+
+</tr>
+
+</table>
+
+<sub>
+Affichage des 1 contributeurs les plus actifs.
+</sub>
+
+</div>
+
 <!-- CONTRIBUTORS:END -->
 
 </div>
