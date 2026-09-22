@@ -1,7 +1,9 @@
 import fs from "node:fs/promises";
 
 const ORGANIZATION = "IT-Consulting-SA";
-const OUTPUT_FILE = "profile/contributors.svg";
+
+const OUTPUT_SVG = "profile/contributors.svg";
+const README_FILE = "profile/README.md";
 
 const API_BASE = "https://api.github.com";
 
@@ -14,6 +16,7 @@ const HEADERS = {
   Accept: "application/vnd.github+json",
   "X-GitHub-Api-Version": "2026-03-10",
   "User-Agent": "IT-Consulting-Contributors-Bot",
+
   ...(TOKEN
     ? {
         Authorization: `Bearer ${TOKEN}`,
@@ -25,13 +28,25 @@ const PER_PAGE = 100;
 const MAX_CONCURRENT_REQUESTS = 5;
 
 /**
- * Pause execution for a given number of milliseconds.
+ * Number of contributors displayed in the README.
+ *
+ * The complete contributor list is still collected.
+ */
+const MAX_DISPLAYED = 60;
+
+/**
+ * Number of contributors per row in README.
+ */
+const README_COLUMNS = 8;
+
+/**
+ * Pause execution.
  */
 const sleep = (ms) =>
   new Promise((resolve) => setTimeout(resolve, ms));
 
 /**
- * Perform a GitHub API request with retries.
+ * GitHub API request with retries.
  */
 async function githubFetch(url) {
   let response;
@@ -46,9 +61,12 @@ async function githubFetch(url) {
     }
 
     /**
-     * GitHub rate limiting.
+     * GitHub rate limit.
      */
-    if (response.status === 403 || response.status === 429) {
+    if (
+      response.status === 403 ||
+      response.status === 429
+    ) {
       const retryAfter = Number(
         response.headers.get("retry-after")
       );
@@ -86,11 +104,16 @@ async function fetchAllPages(url) {
       : "?";
 
     const pageUrl =
-      `${url}${separator}per_page=${PER_PAGE}&page=${page}`;
+      `${url}${separator}` +
+      `per_page=${PER_PAGE}&page=${page}`;
 
-    const data = await githubFetch(pageUrl);
+    const data =
+      await githubFetch(pageUrl);
 
-    if (!Array.isArray(data) || data.length === 0) {
+    if (
+      !Array.isArray(data) ||
+      data.length === 0
+    ) {
       break;
     }
 
@@ -125,10 +148,11 @@ async function mapWithConcurrency(
       }
 
       try {
-        results[currentIndex] = await worker(
-          items[currentIndex],
-          currentIndex
-        );
+        results[currentIndex] =
+          await worker(
+            items[currentIndex],
+            currentIndex
+          );
       } catch (error) {
         console.error(
           `Failed processing item ${currentIndex}:`,
@@ -158,22 +182,21 @@ async function mapWithConcurrency(
 /**
  * Get all repositories belonging to the organization.
  *
- * Repositories created in the future are automatically
- * discovered during the next workflow execution.
- *
- * Archived and disabled repositories are ignored.
- *
  * IMPORTANT:
- * .github is NOT excluded.
+ * .github is intentionally included.
+ *
+ * New repositories created in the organization
+ * will automatically be discovered on the next run.
  */
 async function getRepositories() {
   console.log(
     `Fetching repositories from ${ORGANIZATION}...`
   );
 
-  const repositories = await fetchAllPages(
-    `${API_BASE}/orgs/${ORGANIZATION}/repos?type=all`
-  );
+  const repositories =
+    await fetchAllPages(
+      `${API_BASE}/orgs/${ORGANIZATION}/repos?type=all`
+    );
 
   return repositories.filter(
     (repo) =>
@@ -185,7 +208,7 @@ async function getRepositories() {
 /**
  * Add a GitHub user to the global contributor map.
  *
- * The GitHub login is used as the unique identifier.
+ * GitHub login = unique identifier.
  */
 function addContributor(
   map,
@@ -209,13 +232,14 @@ function addContributor(
     user.user?.type;
 
   /**
-   * Ignore GitHub bots and GitHub Apps.
+   * Ignore GitHub bots.
    *
-   * We deliberately DO NOT use:
+   * DO NOT use:
    *
    * login.toLowerCase().includes("bot")
    *
-   * because legitimate usernames may contain "bot".
+   * because a legitimate GitHub username
+   * may contain the word "bot".
    */
   if (
     type === "Bot" ||
@@ -229,10 +253,19 @@ function addContributor(
     user.user?.avatar_url ||
     "";
 
+  /**
+   * IMPORTANT:
+   *
+   * Always build the contributor profile URL
+   * directly from the GitHub login.
+   *
+   * This prevents accidentally storing the
+   * organization URL.
+   */
   const htmlUrl =
-    user.html_url ||
-    user.user?.html_url ||
-    `https://github.com/${login}`;
+    `https://github.com/${encodeURIComponent(
+      login
+    )}`;
 
   if (!map.has(login)) {
     map.set(login, {
@@ -258,28 +291,17 @@ function addContributor(
     source.type
   );
 
-  /**
-   * If the contributor was first discovered
-   * from an endpoint without an avatar URL,
-   * update it when one becomes available.
-   */
   if (
     !contributor.avatarUrl &&
     avatarUrl
   ) {
-    contributor.avatarUrl = avatarUrl;
-  }
-
-  if (
-    !contributor.htmlUrl &&
-    htmlUrl
-  ) {
-    contributor.htmlUrl = htmlUrl;
+    contributor.avatarUrl =
+      avatarUrl;
   }
 }
 
 /**
- * Fetch classic commit contributors.
+ * Get commit contributors.
  */
 async function getCommitContributors(
   repository
@@ -302,7 +324,7 @@ async function getCommitContributors(
 }
 
 /**
- * Fetch pull requests.
+ * Get pull requests.
  */
 async function getPullRequests(
   repository
@@ -325,7 +347,7 @@ async function getPullRequests(
 }
 
 /**
- * Fetch reviews for a pull request.
+ * Get pull request reviews.
  */
 async function getPullRequestReviews(
   repository,
@@ -351,11 +373,7 @@ async function getPullRequestReviews(
 }
 
 /**
- * Collect contributors from:
- *
- * - commits
- * - pull requests
- * - pull request reviews
+ * Collect all contributors.
  */
 async function collectContributors(
   repositories
@@ -411,8 +429,7 @@ async function collectContributors(
     repositories,
     async (repository) => {
       console.log(
-        `  → pull requests: ` +
-        `${repository.full_name}`
+        `  → pull requests: ${repository.full_name}`
       );
 
       const prs =
@@ -480,7 +497,19 @@ async function collectContributors(
 }
 
 /**
- * Escape XML/SVG content.
+ * Escape HTML.
+ */
+function escapeHtml(value) {
+  return String(value)
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;")
+    .replaceAll("'", "&#39;");
+}
+
+/**
+ * Escape XML.
  */
 function escapeXml(value) {
   return String(value)
@@ -492,7 +521,7 @@ function escapeXml(value) {
 }
 
 /**
- * Get initials from a GitHub username.
+ * Get initials.
  */
 function getInitials(login) {
   if (!login) {
@@ -524,11 +553,9 @@ function getInitials(login) {
 }
 
 /**
- * Download a GitHub avatar and convert it
- * into a Base64 data URI.
+ * Download avatar and convert to Base64.
  *
- * This avoids relying on an external image URL
- * from inside the SVG.
+ * Used only for the SVG fallback.
  */
 async function downloadAvatar(
   avatarUrl
@@ -577,19 +604,14 @@ async function downloadAvatar(
         "content-type"
       ) || "image/jpeg";
 
-    /**
-     * Only allow actual image content types.
-     */
     const safeContentType =
       contentType.startsWith("image/")
         ? contentType
         : "image/jpeg";
 
-    const base64 =
-      buffer.toString("base64");
-
     return (
-      `data:${safeContentType};base64,${base64}`
+      `data:${safeContentType};base64,` +
+      buffer.toString("base64")
     );
   } catch (error) {
     console.warn(
@@ -602,10 +624,12 @@ async function downloadAvatar(
 }
 
 /**
- * Generate the contributors SVG.
+ * Generate SVG fallback.
  *
- * Avatars are embedded directly into the SVG
- * as Base64 data URIs.
+ * IMPORTANT:
+ * Individual SVG links are NOT relied upon
+ * by the README because the SVG is loaded as
+ * an <img>.
  */
 async function generateSvg(
   contributors
@@ -623,14 +647,6 @@ async function generateSvg(
           )
       );
 
-  /**
-   * Limit the visual output.
-   *
-   * The complete contributor list is still
-   * collected and deduplicated.
-   */
-  const MAX_DISPLAYED = 60;
-
   const displayed =
     sorted.slice(
       0,
@@ -640,6 +656,7 @@ async function generateSvg(
   const avatarSize = 72;
   const gap = 28;
   const columns = 8;
+  const cellHeight = 112;
 
   const rows =
     Math.max(
@@ -649,8 +666,6 @@ async function generateSvg(
           columns
       )
     );
-
-  const cellHeight = 112;
 
   const width =
     columns * avatarSize +
@@ -662,12 +677,6 @@ async function generateSvg(
     40;
 
   const elements = [];
-
-  /*
-   * ------------------------------------------------------------
-   * AVATARS
-   * ------------------------------------------------------------
-   */
 
   for (
     let index = 0;
@@ -700,11 +709,6 @@ async function generateSvg(
         contributor.login
       );
 
-    const profileUrl =
-      escapeXml(
-        contributor.htmlUrl
-      );
-
     const initials =
       escapeXml(
         getInitials(
@@ -712,9 +716,6 @@ async function generateSvg(
         )
       );
 
-    /**
-     * Each avatar gets its own clipPath ID.
-     */
     const clipId =
       `avatar-clip-${index}`;
 
@@ -735,81 +736,60 @@ async function generateSvg(
           </clipPath>
         </defs>
 
-        <a
-          href="${profileUrl}"
-          target="_blank"
+        <image
+          x="${x}"
+          y="${y}"
+          width="${avatarSize}"
+          height="${avatarSize}"
+          href="${avatarData}"
+          clip-path="url(#${clipId})"
+          preserveAspectRatio="xMidYMid slice"
+        />
+
+        <text
+          x="${x + avatarSize / 2}"
+          y="${y + avatarSize + 22}"
+          text-anchor="middle"
+          font-family="Arial, Helvetica, sans-serif"
+          font-size="12"
+          font-weight="600"
+          fill="#24292f"
         >
-          <title>
-            ${login} — ${contributor.repositories.size} repo(s)
-          </title>
-
-          <image
-            x="${x}"
-            y="${y}"
-            width="${avatarSize}"
-            height="${avatarSize}"
-            href="${avatarData}"
-            clip-path="url(#${clipId})"
-            preserveAspectRatio="xMidYMid slice"
-          />
-
-          <text
-            x="${x + avatarSize / 2}"
-            y="${y + avatarSize + 22}"
-            text-anchor="middle"
-            font-family="Arial, Helvetica, sans-serif"
-            font-size="12"
-            font-weight="600"
-            fill="#24292f"
-          >
-            ${login}
-          </text>
-        </a>
+          ${login}
+        </text>
       `);
     } else {
-      /**
-       * Fallback if the avatar cannot be downloaded.
-       */
       elements.push(`
-        <a
-          href="${profileUrl}"
-          target="_blank"
+        <circle
+          cx="${x + avatarSize / 2}"
+          cy="${y + avatarSize / 2}"
+          r="${avatarSize / 2}"
+          fill="#24292f"
+        />
+
+        <text
+          x="${x + avatarSize / 2}"
+          y="${y + avatarSize / 2 + 8}"
+          text-anchor="middle"
+          font-family="Arial, Helvetica, sans-serif"
+          font-size="22"
+          font-weight="700"
+          fill="#ffffff"
         >
-          <title>
-            ${login} — ${contributor.repositories.size} repo(s)
-          </title>
+          ${initials}
+        </text>
 
-          <circle
-            cx="${x + avatarSize / 2}"
-            cy="${y + avatarSize / 2}"
-            r="${avatarSize / 2}"
-            fill="#24292f"
-          />
-
-          <text
-            x="${x + avatarSize / 2}"
-            y="${y + avatarSize / 2 + 8}"
-            text-anchor="middle"
-            font-family="Arial, Helvetica, sans-serif"
-            font-size="22"
-            font-weight="700"
-            fill="#ffffff"
-          >
-            ${initials}
-          </text>
-
-          <text
-            x="${x + avatarSize / 2}"
-            y="${y + avatarSize + 22}"
-            text-anchor="middle"
-            font-family="Arial, Helvetica, sans-serif"
-            font-size="12"
-            font-weight="600"
-            fill="#24292f"
-          >
-            ${login}
-          </text>
-        </a>
+        <text
+          x="${x + avatarSize / 2}"
+          y="${y + avatarSize + 22}"
+          text-anchor="middle"
+          font-family="Arial, Helvetica, sans-serif"
+          font-size="12"
+          font-weight="600"
+          fill="#24292f"
+        >
+          ${login}
+        </text>
       `);
     }
   }
@@ -824,7 +804,6 @@ async function generateSvg(
   role="img"
   aria-label="IT-Consulting contributors"
 >
-
   <title>
     IT-Consulting Contributors
   </title>
@@ -832,7 +811,7 @@ async function generateSvg(
   <rect
     width="100%"
     height="100%"
-    fill="transparent"
+    fill="#ffffff"
   />
 
   ${elements.join("\n")}
@@ -842,7 +821,242 @@ async function generateSvg(
 }
 
 /**
- * Main execution.
+ * Generate the INTERACTIVE contributor grid
+ * directly inside README.md.
+ *
+ * Every contributor gets his own <a href="">
+ * pointing to his own GitHub profile.
+ *
+ * No outer organization link is used.
+ */
+function generateReadmeGrid(
+  contributors
+) {
+  const sorted =
+    [...contributors.values()]
+      .sort(
+        (a, b) =>
+          b.repositories.size -
+            a.repositories.size ||
+          b.contributions -
+            a.contributions ||
+          a.login.localeCompare(
+            b.login
+          )
+      );
+
+  const displayed =
+    sorted.slice(
+      0,
+      MAX_DISPLAYED
+    );
+
+  if (displayed.length === 0) {
+    return `
+<div align="center">
+
+_Aucun contributeur à afficher pour le moment._
+
+</div>
+`;
+  }
+
+  const rows = [];
+
+  for (
+    let i = 0;
+    i < displayed.length;
+    i += README_COLUMNS
+  ) {
+    const row =
+      displayed.slice(
+        i,
+        i + README_COLUMNS
+      );
+
+    const cells = row.map(
+      (contributor) => {
+        const login =
+          escapeHtml(
+            contributor.login
+          );
+
+        const profileUrl =
+          escapeHtml(
+            contributor.htmlUrl
+          );
+
+        const avatarUrl =
+          escapeHtml(
+            contributor.avatarUrl
+          );
+
+        const repoCount =
+          contributor.repositories.size;
+
+        return `
+<td align="center" valign="top" width="12.5%">
+
+<a href="${profileUrl}" title="Voir le profil GitHub de ${login}">
+
+<img
+  src="${avatarUrl}"
+  alt="${login}"
+  width="72"
+  height="72"
+/>
+
+<br />
+
+<strong>${login}</strong>
+
+</a>
+
+<br />
+
+<sub>${repoCount} repo${repoCount > 1 ? "s" : ""}</sub>
+
+</td>
+`;
+      }
+    );
+
+    /**
+     * Fill remaining cells so the table remains
+     * visually aligned.
+     */
+    while (
+      cells.length <
+      README_COLUMNS
+    ) {
+      cells.push(
+        `
+<td width="12.5%"></td>
+`
+      );
+    }
+
+    rows.push(`
+<tr>
+${cells.join("\n")}
+</tr>
+`);
+  }
+
+  return `
+<div align="center">
+
+<table>
+${rows.join("\n")}
+</table>
+
+<sub>
+Affichage des ${displayed.length} contributeurs les plus actifs.
+</sub>
+
+</div>
+`;
+}
+
+/**
+ * Update the Contributors section in README.md.
+ *
+ * The section must contain:
+ *
+ * <!-- CONTRIBUTORS:START -->
+ * ...
+ * <!-- CONTRIBUTORS:END -->
+ */
+async function updateReadme(
+  contributors
+) {
+  console.log(
+    "Updating contributors section in README..."
+  );
+
+  let readme;
+
+  try {
+    readme =
+      await fs.readFile(
+        README_FILE,
+        "utf8"
+      );
+  } catch (error) {
+    throw new Error(
+      `Unable to read ${README_FILE}: ${error.message}`
+    );
+  }
+
+  const startMarker =
+    "<!-- CONTRIBUTORS:START -->";
+
+  const endMarker =
+    "<!-- CONTRIBUTORS:END -->";
+
+  const startIndex =
+    readme.indexOf(
+      startMarker
+    );
+
+  const endIndex =
+    readme.indexOf(
+      endMarker
+    );
+
+  if (
+    startIndex === -1 ||
+    endIndex === -1
+  ) {
+    throw new Error(
+      `Contributor markers not found in ${README_FILE}.\n\n` +
+      `Add these two markers around the contributor grid:\n\n` +
+      `${startMarker}\n` +
+      `${endMarker}`
+    );
+  }
+
+  if (endIndex < startIndex) {
+    throw new Error(
+      "Invalid contributor markers order in README."
+    );
+  }
+
+  const grid =
+    generateReadmeGrid(
+      contributors
+    );
+
+  const before =
+    readme.slice(
+      0,
+      startIndex +
+        startMarker.length
+    );
+
+  const after =
+    readme.slice(
+      endIndex
+    );
+
+  const updated =
+    `${before}\n\n` +
+    `${grid}\n` +
+    `${after}`;
+
+  await fs.writeFile(
+    README_FILE,
+    updated,
+    "utf8"
+  );
+
+  console.log(
+    `Updated ${README_FILE}`
+  );
+}
+
+/**
+ * Main.
  */
 async function main() {
   console.log("");
@@ -899,7 +1113,7 @@ async function main() {
 
   /*
    * ------------------------------------------------------------
-   * DISPLAY CONTRIBUTORS IN LOGS
+   * LOG CONTRIBUTORS
    * ------------------------------------------------------------
    */
 
@@ -921,31 +1135,26 @@ async function main() {
   ) {
     console.log(
       `  ${contributor.login}` +
-      ` — ${contributor.repositories.size} repo(s)`
+      ` — ${contributor.repositories.size} repo(s)` +
+      ` — ${contributor.htmlUrl}`
     );
   }
 
   /*
    * ------------------------------------------------------------
-   * GENERATE SVG
+   * GENERATE SVG FALLBACK
    * ------------------------------------------------------------
    */
 
   console.log("");
   console.log(
-    "Generating contributors SVG..."
+    "Generating SVG fallback..."
   );
 
   const svg =
     await generateSvg(
       contributors
     );
-
-  /*
-   * ------------------------------------------------------------
-   * CREATE OUTPUT DIRECTORY
-   * ------------------------------------------------------------
-   */
 
   await fs.mkdir(
     "profile",
@@ -954,25 +1163,37 @@ async function main() {
     }
   );
 
-  /*
-   * ------------------------------------------------------------
-   * WRITE FILE
-   * ------------------------------------------------------------
-   */
-
   await fs.writeFile(
-    OUTPUT_FILE,
+    OUTPUT_SVG,
     svg,
     "utf8"
   );
 
-  console.log("");
   console.log(
-    `Generated ${OUTPUT_FILE}`
+    `Generated ${OUTPUT_SVG}`
+  );
+
+  /*
+   * ------------------------------------------------------------
+   * UPDATE README
+   * ------------------------------------------------------------
+   */
+
+  await updateReadme(
+    contributors
   );
 
   console.log("");
-  console.log("Done.");
+  console.log(
+    "=========================================="
+  );
+  console.log(
+    " Contributors generation completed"
+  );
+  console.log(
+    "=========================================="
+  );
+  console.log("");
 }
 
 /**
