@@ -9,7 +9,7 @@ on:
   push:
     paths:
       - "scripts/generate-contributors.mjs"
-      - ".github/workflows/contributors.yml"
+      - ".github/workflows/main.yml"
 
 permissions:
   contents: write
@@ -37,16 +37,16 @@ jobs:
         run: |
           node scripts/generate-contributors.mjs
 
-      - name: Check generated file
+      - name: Check generated README
         run: |
-          test -f profile/contributors.svg
+          test -f profile/README.md
 
       - name: Commit changes
         run: |
           git config user.name "IT-Consulting Contributors Bot"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
 
-          git add profile/contributors.svg
+          git add profile/README.md
 
           if git diff --cached --quiet; then
             echo "No contributor changes detected."
