@@ -1,0 +1,58 @@
+name: Generate Contributors
+
+on:
+  schedule:
+    # Every day at 00:00 UTC
+    - cron: "0 0 * * *"
+
+  workflow_dispatch:
+
+  push:
+    paths:
+      - "scripts/generate-contributors.mjs"
+      - ".github/workflows/contributors.yml"
+
+permissions:
+  contents: write
+
+jobs:
+  generate:
+    name: Update contributors
+    runs-on: ubuntu-latest
+
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Generate contributors
+        env:
+          GH_TOKEN: ${{ secrets.GH_TOKEN }}
+        run: |
+          node scripts/generate-contributors.mjs
+
+      - name: Check generated file
+        run: |
+          test -f profile/contributors.svg
+
+      - name: Commit changes
+        run: |
+          git config user.name "IT-Consulting Contributors Bot"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+          git add profile/contributors.svg
+
+          if git diff --cached --quiet; then
+            echo "No contributor changes detected."
+            exit 0
+          fi
+
+          git commit -m "chore: update contributors"
+          git push
