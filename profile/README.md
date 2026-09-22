@@ -444,12 +444,9 @@ Nous remercions toutes les personnes qui contribuent au développement,
 
 <div align="center">
 
-<a href="https://github.com/IT-Consulting-SA" title="IT-Consulting contributors">
-  <img
-    src="https://raw.githubusercontent.com/IT-Consulting-SA/.github/main/profile/contributors.svg"
-    alt="IT-Consulting contributors"
-  />
-</a>
+<!-- CONTRIBUTORS:START -->
+
+<!-- CONTRIBUTORS:END -->
 
 </div>
 
