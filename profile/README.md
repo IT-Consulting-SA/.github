@@ -400,7 +400,7 @@ Nos dépôts peuvent couvrir différentes étapes du cycle de vie logiciel :
 
 ---
 
-# 🧰 Stack technique — résumé
+# 🧰 Stack technique, résumé
 
 | Domaine                | Technologies                                                             |
 | ---------------------- | ------------------------------------------------------------------------ |
@@ -420,7 +420,7 @@ Nos dépôts peuvent couvrir différentes étapes du cycle de vie logiciel :
 
 # 📞 Contact
 
-**IT-Consulting — République Démocratique du Congo**
+**IT-Consulting - République Démocratique du Congo**
 
 🌐 **Website**
 https://itconsultingdrc.org
@@ -441,7 +441,7 @@ https://github.com/IT-Consulting-SA
 
 ### 🚀 Construisons des solutions technologiques qui font la différence.
 
-**IT-Consulting — L'expertise IT à votre portée.**
+**IT-Consulting, L'expertise IT à votre portée.**
 
 <br />
 
